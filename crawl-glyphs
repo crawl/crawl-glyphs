@@ -1,0 +1,101 @@
+#! /usr/bin/perl -w
+#
+# Run as:  crawl-glyphs mon-data.h > out.html
+use strict;
+
+# Use two rows for each glyph instead of just one.
+our $USE_TWO_ROWS = 1;
+
+our %COLOURS = (
+	BLACK => 0, BLUE => 1, GREEN => 2, CYAN => 3,
+	RED => 4, MAGENTA => 5, BROWN => 6, LIGHTGRAY => 7, LIGHTGREY => 7,
+	DARKGRAY => 8, DARKGREY => 8, LIGHTBLUE => 9, LIGHTGREEN => 10, LIGHTCYAN => 11,
+	LIGHTRED => 12, LIGHTMAGENTA => 13, YELLOW => 14, WHITE => 15
+);
+
+our @COLNAMES = qw(
+	black blue green cyan
+	red magenta brown lightgrey
+	darkgrey lightblue lightgreen lightcyan
+	lightred lightmagenta yellow white elemental
+);
+
+sub colcode($) {
+	my $c=shift;
+	return $COLOURS{uc($c)} || 16
+}
+
+sub colname($) {
+	my $c=shift;
+	return $COLNAMES[$c] || "unknown";
+}
+
+my %mons;
+
+while (<>) {
+	chomp;
+	next unless /MONS_.*'(.)', ([^,]*), "([^"]*)"/;
+	my ($glyph, $colour, $name) = ($1,$2,$3);
+	push @{$mons{$glyph}{colcode($colour)}}, $name;
+}
+
+
+print <<EOF;
+<html>
+<head>
+<style type="text/css">
+BODY { background-color: black; color: white; }
+TD {
+	border-left: 1px solid white;
+	border-right:1px solid white;
+	border-bottom:1px solid #808080;
+}
+TR.second { border-bottom: 2px solid white; }
+TABLE { border-collapse: collapse; }
+.fg0 { color: #000000; } /* black */
+.fg1 { color: #285aa7; } /* blue */
+.fg2 { color: #4e9a06; } /* green */
+.fg3 { color: #06989a; } /* cyan */
+.fg4 { color: #a40000; } /* red */
+.fg5 { color: #904080; } /* magenta */
+.fg6 { color: #af7902; } /* brown */
+.fg7 { color: #babdb6; } /* lightgray */
+.fg8 { color: #555753; } /* darkgray */
+.fg9 { color: #729fcf; } /* lightblue */
+.fg10 { color: #8ae234; } /* lightgreen */
+.fg11 { color: #34e2e2; } /* lightcyan */
+.fg12 { color: #ef2929; } /* lightred */
+.fg13 { color: #b06fb0; } /* lightmagenta */
+.fg14 { color: #fce94f; } /* yellow */
+.fg15 { color: #eeeeec; } /* white */
+</style>
+</head>
+<body>
+<table><tr><th></th>
+EOF
+for my $c (1..16) {
+	print "<th class='fg$c'>" . colname($c) . "</th>";
+	print "</tr><tr class='second'><th></th>" if ($USE_TWO_ROWS and $c == 8);
+}
+print "</tr>\n";
+for my $g (sort keys %mons) {
+	my $g_h = $g;
+	$g_h =~ s/\&/\&amp;/g;
+	printf "<tr><th%s>%s</th>", ($USE_TWO_ROWS ? ' rowspan="2"' : ""), $g;
+	for my $c (1..16) {
+		printf "<td><span class='fg%d'>", $c;
+		if (exists $mons{$g}{$c}) {
+			print join("<br>", @{$mons{$g}{$c}})
+		} else {
+			print "&nbsp;";
+		}
+		print "</span></td>";
+		print "</tr><tr class='second'>" if ($USE_TWO_ROWS and $c == 8);
+	}
+	print "</tr>"
+}
+print <<EOF;
+</table>
+</body>
+</html>
+EOF
